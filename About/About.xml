@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Faux Rock Floor</name>
+  <author>Toby</author>
+  <supportedVersions>
+    <li>1.2</li>
+  </supportedVersions>
+  <packageId>toby.fauxrockfloor</packageId>
+  <description>Adds buildable floors that look like natural rock, in rough or rough-hewn variations.
+Faster to build than Tiled Floors but also slightly more expensive.
+Can be smoothed.
+
+There are quite possibly some bugs because what I did was so scuffed.
+
+Goes well with MBS Faux Rock Wall (https://steamcommunity.com/sharedfiles/filedetails/?id=760281834)
+  </description>
+  <loadAfter>
+    <li>Ludeon.RimWorld</li>
+  </loadAfter>
+</ModMetaData>
