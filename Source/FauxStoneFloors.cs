@@ -13,54 +13,58 @@ namespace GenerateFauxStoneFloors
 
         static FauxStoneFloors()
         {
-            foreach (var floorDef in GenerateFauxStoneFloors())
-			{
-                if(floorDef.BuildableByPlayer)
+            //new Harmony("tech.tobot.fauxstonefloors").PatchAll();
+            AddImpliedFauxFloors();
+        }
+
+        public static void AddImpliedFauxFloors()
+        {
+            foreach (var terrainDef in FauxStoneFloors.GenerateFauxStoneFloors())
+            {
+                DefGenerator.AddImpliedDef(terrainDef);
+                if (terrainDef.BuildableByPlayer)
                 {
-                    DefGenerator.AddImpliedDef(floorDef.blueprintDef);
-                    DefGenerator.AddImpliedDef(floorDef.frameDef);
+                    DefGenerator.AddImpliedDef(terrainDef.blueprintDef);
+                    DefGenerator.AddImpliedDef(terrainDef.frameDef);
                 }
-                DefGenerator.AddImpliedDef(floorDef);
-#if DEBUG
-                Log.Message($"{floorDef.shortHash}-{floorDef.frameDef?.shortHash}-{floorDef.blueprintDef?.shortHash}");
-#endif
             }
             DefDatabase<DesignationCategoryDef>.GetNamed("Floors").ResolveReferences();
             WealthWatcher.ResetStaticData();
         }
 
-        static Dictionary<System.Type, HashSet<ushort>> generatedHashes = new Dictionary<System.Type, HashSet<ushort>>();
+        private static readonly Dictionary<System.Type, HashSet<ushort>> generatedHashes = new Dictionary<System.Type, HashSet<ushort>>();
+
         private static void GenerateNewHash<T>(T def) where T : Def
-		{
+        {
 #if DEBUG
             Log.Message($"Generating hash for {def.defName}");
 #endif
             var alreadyGeneratedHashes = generatedHashes.TryGetValue(typeof(T));
-            if(alreadyGeneratedHashes == null)
-			{
+            if (alreadyGeneratedHashes == null)
+            {
                 alreadyGeneratedHashes = new HashSet<ushort>();
                 generatedHashes.SetOrAdd(typeof(T), alreadyGeneratedHashes);
-			}
+            }
             var existingHashes = DefDatabase<T>.AllDefs.Select(d => d.shortHash);
             var generatedHash = (ushort)(GenText.StableStringHash(def.defName) % ushort.MaxValue);
             var iterations = 0;
 
-            while(generatedHash == 0 || existingHashes.Contains(generatedHash) || alreadyGeneratedHashes.Contains(generatedHash))
-			{
+            while (generatedHash == 0 || existingHashes.Contains(generatedHash) || alreadyGeneratedHashes.Contains(generatedHash))
+            {
                 generatedHash++;
                 iterations++;
                 if (iterations > 5000)
                     Log.Warning("[FauxRockFloors] Short hashes are saturated. There are probably too many Defs, or the author of this mod screwed something up. Either way, go complain somewhere.");
-			}
+            }
 #if DEBUG
             if (DefDatabase<T>.GetByShortHash(generatedHash) is T existingDef && existingDef != null)
                 Log.Error($"Hash {generatedHash} already exists on {existingDef.defName} but was also generated for {def.defName}");
 #endif
             alreadyGeneratedHashes.Add(generatedHash);
             def.shortHash = generatedHash;
-		}
+        }
 
-        static IEnumerable<TerrainDef> GenerateFauxStoneFloors(ModContentPack pack = null)
+        internal static IEnumerable<TerrainDef> GenerateFauxStoneFloors(ModContentPack pack = null)
         {
             var rocks = DefDatabase<ThingDef>.AllDefs.Where(def => !(def.building is null) && def.building.isNaturalRock && !def.building.isResourceRock);
 
@@ -77,58 +81,55 @@ namespace GenerateFauxStoneFloors
                 generated = true
             };
 
-            DefDatabase<DesignatorDropdownGroupDef>.Add(roughDesignationDropdown);
-            DefDatabase<DesignatorDropdownGroupDef>.Add(roughHewnDesignatorDropdown);
-
             var result = new List<TerrainDef>();
             foreach (var rock in rocks)
             {
 #if DEBUG
                 Log.Message($"Generating floors for {rock.ToStringSafe()}");
 #endif
-                var roughDef = new FauxRoughStone(rock, pack);
-                var roughHewnDef = new FauxRoughHewnStone(rock, pack);
-                var smoothDef = new FauxSmoothStone(rock, pack);
-                
-                roughDef.designatorDropdown = roughDesignationDropdown;
-                roughHewnDef.designatorDropdown = roughHewnDesignatorDropdown;
-                
-                roughDef.smoothedTerrain = smoothDef;
-                roughHewnDef.smoothedTerrain = smoothDef;
+                var fauxRoughDef = new FauxRoughStone(rock, pack);
+                var fauxRoughHewnDef = new FauxRoughHewnStone(rock, pack);
+                var fauxSmoothDef = new FauxSmoothStone(rock, pack);
 
-                result.Add(roughDef);
-                result.Add(roughHewnDef);
-                result.Add(smoothDef);
+                fauxRoughDef.designatorDropdown = roughDesignationDropdown;
+                fauxRoughHewnDef.designatorDropdown = roughHewnDesignatorDropdown;
+
+                fauxRoughDef.smoothedTerrain = fauxSmoothDef;
+                fauxRoughHewnDef.smoothedTerrain = fauxSmoothDef;
+
+                result.Add(fauxRoughDef);
+                result.Add(fauxRoughHewnDef);
+                result.Add(fauxSmoothDef);
             }
             return result;
         }
 
         private static ThingDef GenerateBlueprint(TerrainDef terrDef)
         {
-			var blueprintDef = new ThingDef
-			{
-				category = ThingCategory.Ethereal,
-				altitudeLayer = AltitudeLayer.Blueprint,
-				useHitPoints = false,
-				selectable = true,
-				seeThroughFog = true,
-				thingClass = typeof(Blueprint_Build),
-				defName = ThingDefGenerator_Buildings.BlueprintDefNamePrefix + terrDef.defName,
-				label = terrDef.label + "BlueprintLabelExtra".Translate(),
-				graphicData = new GraphicData
-				{
-					shaderType = ShaderTypeDefOf.MetaOverlay,
-					texPath = TerrainBlueprintGraphicPath,
-					graphicClass = typeof(Graphic_Single)
-				},
-				constructionSkillPrerequisite = terrDef.constructionSkillPrerequisite,
-				artisticSkillPrerequisite = terrDef.artisticSkillPrerequisite,
-				clearBuildingArea = false,
-				modContentPack = terrDef.modContentPack,
-				entityDefToBuild = terrDef,
-				drawerType = DrawerType.MapMeshAndRealTime
-			};
-			blueprintDef.comps.Add(new CompProperties_Forbiddable());
+            var blueprintDef = new ThingDef
+            {
+                category = ThingCategory.Ethereal,
+                altitudeLayer = AltitudeLayer.Blueprint,
+                useHitPoints = false,
+                selectable = true,
+                seeThroughFog = true,
+                thingClass = typeof(Blueprint_Build),
+                defName = ThingDefGenerator_Buildings.BlueprintDefNamePrefix + terrDef.defName,
+                label = terrDef.label + "BlueprintLabelExtra".Translate(),
+                graphicData = new GraphicData
+                {
+                    shaderType = ShaderTypeDefOf.MetaOverlay,
+                    texPath = TerrainBlueprintGraphicPath,
+                    graphicClass = typeof(Graphic_Single)
+                },
+                constructionSkillPrerequisite = terrDef.constructionSkillPrerequisite,
+                artisticSkillPrerequisite = terrDef.artisticSkillPrerequisite,
+                clearBuildingArea = false,
+                modContentPack = terrDef.modContentPack,
+                entityDefToBuild = terrDef,
+                drawerType = DrawerType.MapMeshAndRealTime
+            };
+            blueprintDef.comps.Add(new CompProperties_Forbiddable());
 
             GenerateNewHash(blueprintDef);
 
@@ -137,34 +138,34 @@ namespace GenerateFauxStoneFloors
 
         private static ThingDef GenerateFrame(TerrainDef terrDef)
         {
-			var frameDef = new ThingDef
-			{
-				isFrameInt = true,
-				thingClass = typeof(Frame),
-				altitudeLayer = AltitudeLayer.Building,
-				building = new BuildingProperties
-				{
-					artificialForMeditationPurposes = false,
-					isEdifice = false
-				},
-				scatterableOnMapGen = false,
-				leaveResourcesWhenKilled = true,
-				defName = ThingDefGenerator_Buildings.BuildingFrameDefNamePrefix + terrDef.defName,
-				label = terrDef.label + "FrameLabelExtra".Translate(),
-				useHitPoints = false,
-				fillPercent = 0.0f,
-				description = "Terrain building in progress.",
-				passability = Traversability.Standable,
-				selectable = true,
-				constructEffect = terrDef.constructEffect,
-				constructionSkillPrerequisite = terrDef.constructionSkillPrerequisite,
-				artisticSkillPrerequisite = terrDef.artisticSkillPrerequisite,
-				clearBuildingArea = false,
-				modContentPack = terrDef.modContentPack,
-				category = ThingCategory.Ethereal,
-				entityDefToBuild = terrDef
-			};
-			frameDef.comps.Add(new CompProperties_Forbiddable());
+            var frameDef = new ThingDef
+            {
+                isFrameInt = true,
+                thingClass = typeof(Frame),
+                altitudeLayer = AltitudeLayer.Building,
+                building = new BuildingProperties
+                {
+                    artificialForMeditationPurposes = false,
+                    isEdifice = false
+                },
+                scatterableOnMapGen = false,
+                leaveResourcesWhenKilled = true,
+                defName = ThingDefGenerator_Buildings.BuildingFrameDefNamePrefix + terrDef.defName,
+                label = terrDef.label + "FrameLabelExtra".Translate(),
+                useHitPoints = false,
+                fillPercent = 0.0f,
+                description = "Terrain building in progress.",
+                passability = Traversability.Standable,
+                selectable = true,
+                constructEffect = terrDef.constructEffect,
+                constructionSkillPrerequisite = terrDef.constructionSkillPrerequisite,
+                artisticSkillPrerequisite = terrDef.artisticSkillPrerequisite,
+                clearBuildingArea = false,
+                modContentPack = terrDef.modContentPack,
+                category = ThingCategory.Ethereal,
+                entityDefToBuild = terrDef
+            };
+            frameDef.comps.Add(new CompProperties_Forbiddable());
             terrDef.frameDef = frameDef;
             if (!frameDef.IsFrame)
                 Log.Error("Framedef is not frame: " + frameDef);
@@ -175,8 +176,8 @@ namespace GenerateFauxStoneFloors
         }
 
         internal abstract class FloorBase : TerrainDef
-		{
-			public FloorBase()
+        {
+            public FloorBase()
             {
                 layerable = true;
                 affordances = new List<TerrainAffordanceDef>
@@ -192,11 +193,11 @@ namespace GenerateFauxStoneFloors
                 constructEffect = EffecterDefOf.ConstructDirt;
                 terrainAffordanceNeeded = TerrainAffordanceDefOf.Heavy;
             }
-		}
+        }
 
         internal class FauxRoughStone : FloorBase
-		{
-			public FauxRoughStone(ThingDef rockDef, ModContentPack pack = null) : base()
+        {
+            public FauxRoughStone(ThingDef rockDef, ModContentPack pack = null) : base()
             {
                 if (rockDef is null)
                 {
@@ -204,15 +205,15 @@ namespace GenerateFauxStoneFloors
                     return;
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
-				{
+                {
                     Log.Error($"Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                     return;
-				}
+                }
                 var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.LabelCap);
                 if (blocks is null)
-				{
+                {
                     Log.Error($"Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
-				}
+                }
 
                 description = "Made to mimic ugly natural rock. Since these floors are not made for their beauty, they can be made faster but require slightly more material than regular stone tiles. Can be smoothed.";
                 texturePath = "Terrain/Surfaces/RoughStone";
@@ -248,17 +249,17 @@ namespace GenerateFauxStoneFloors
                 StatUtility.SetStatValueInList(ref statBases, StatDefOf.WorkToBuild, 500f);
                 StatUtility.SetStatValueInList(ref statBases, StatDefOf.Beauty, -1f);
             }
-		}
+        }
 
         internal class FauxRoughHewnStone : FloorBase
-		{
-			public FauxRoughHewnStone(ThingDef rockDef, ModContentPack pack = null) : base()
-			{
+        {
+            public FauxRoughHewnStone(ThingDef rockDef, ModContentPack pack = null) : base()
+            {
                 if (rockDef is null)
-				{
+                {
                     Log.Error("Tried to create Faux Rough-Hewn Rock from null Thing.");
                     return;
-				}
+                }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
                     Log.Warning($"Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
@@ -303,11 +304,11 @@ namespace GenerateFauxStoneFloors
                 StatUtility.SetStatValueInList(ref statBases, StatDefOf.WorkToBuild, 500f);
                 StatUtility.SetStatValueInList(ref statBases, StatDefOf.Beauty, -1f);
             }
-		}
+        }
 
         internal class FauxSmoothStone : FloorBase
-		{
-			public FauxSmoothStone(ThingDef rockDef, ModContentPack pack = null) : base()
+        {
+            public FauxSmoothStone(ThingDef rockDef, ModContentPack pack = null) : base()
             {
                 if (rockDef is null)
                 {
