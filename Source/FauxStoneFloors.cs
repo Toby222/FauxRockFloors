@@ -13,7 +13,6 @@ namespace GenerateFauxStoneFloors
 
         static FauxStoneFloors()
         {
-            //new Harmony("tech.tobot.fauxstonefloors").PatchAll();
             AddImpliedFauxFloors();
         }
 
@@ -201,18 +200,19 @@ namespace GenerateFauxStoneFloors
             {
                 if (rockDef is null)
                 {
-                    Log.Error("Tried to create Faux Rough Rock from null Thing.");
+                    Log.Error("[FauxStoneFloors] Tried to create Faux Rough Rock from null Thing.");
                     return;
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Error($"Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
+                    Log.Error($"[FauxStoneFloors] Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                     return;
                 }
-                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.LabelCap);
+                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
                 if (blocks is null)
                 {
-                    Log.Error($"Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    return;
                 }
 
                 description = "Made to mimic ugly natural rock. Since these floors are not made for their beauty, they can be made faster but require slightly more material than regular stone tiles. Can be smoothed.";
@@ -264,10 +264,11 @@ namespace GenerateFauxStoneFloors
                 {
                     Log.Warning($"Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
-                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.LabelCap);
+                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
                 if (blocks is null)
                 {
-                    Log.Error($"Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    return;
                 }
 
                 description = "Made to mimic ugly natural rough-hewn rock. Since these floors are not made for their beauty, they can be made faster but require slightly more material than regular stone tiles. Can be smoothed.";
@@ -312,17 +313,18 @@ namespace GenerateFauxStoneFloors
             {
                 if (rockDef is null)
                 {
-                    Log.Error("Tried to create Faux Smooth Rock from null Thing.");
+                    Log.Error("[FauxStoneFloors] Tried to create Faux Smooth Rock from null Thing.");
                     return;
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Warning($"Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
+                    Log.Warning($"[FauxStoneFloors] Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
-                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.LabelCap);
+                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
                 if (blocks is null)
                 {
-                    Log.Error($"Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    Log.Warning($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    return;
                 }
 
                 description = "Originally made to mimic ugly natural rock, this floor has been polished to a shiny, smooth surface.";
