@@ -9,7 +9,7 @@ namespace GenerateFauxStoneFloors
     public static class FauxStoneFloors
     {
         private const int BUILD_COST = 6;
-        private static readonly string TerrainBlueprintGraphicPath = "Things/Special/TerrainBlueprint";
+        private const string TerrainBlueprintGraphicPath = "Things/Special/TerrainBlueprint";
 
         static FauxStoneFloors()
         {
