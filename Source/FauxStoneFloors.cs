@@ -10,6 +10,17 @@ namespace GenerateFauxStoneFloors
     {
         private const int BUILD_COST = 6;
         private const string TerrainBlueprintGraphicPath = "Things/Special/TerrainBlueprint";
+        private static readonly IReadOnlyList<string> Prefixes = new List<string> {
+#region Alpha Biomes Prefixes
+            "AB_",
+            "GU_"
+#endregion
+        };
+        private static readonly IReadOnlyList<string> IgnoredDefNames = new List<string> {
+#region Alpha Biomes DefNames
+            "GU_AncientMetals"
+#endregion
+        };
 
         static FauxStoneFloors()
         {
@@ -67,6 +78,33 @@ namespace GenerateFauxStoneFloors
             def.shortHash = generatedHash;
         }
 
+        // Thanks Alpha Biomes, very cool
+        private static ThingDef GetBlocksForRock(ThingDef rockDef)
+        {
+#if DEBUG
+            Log.Message($"Trying to find blocks for {rockDef.ToStringSafe()}");
+#endif
+            switch (rockDef.defName)
+            {
+                case "AB_Obsidianstone":
+                    return DefDatabase<ThingDef>.GetNamed("AB_BlocksObsidian");
+                case "AB_SlimeStone":
+                    return DefDatabase<ThingDef>.GetNamed("AB_SlimeMeal");
+                case "GU_AncientMetals":
+                    return null;
+            }
+
+            if (Prefixes.FirstOrDefault(prefix => rockDef.defName.StartsWith(prefix)) is string rockDefNamePrefix)
+            {
+                string rockDefNameUnprefixed = rockDef.defName.Substring(rockDefNamePrefix.Length);
+                return DefDatabase<ThingDef>.GetNamed(rockDefNamePrefix + "Blocks" + rockDefNameUnprefixed, errorOnFail: false);
+            }
+            else
+            {
+                return DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName, errorOnFail: false);
+            }
+        }
+
         internal static IEnumerable<TerrainDef> GenerateFauxStoneFloors(ModContentPack pack = null)
         {
             IEnumerable<ThingDef> rocks = DefDatabase<ThingDef>.AllDefs.Where(def => !(def.building is null) && def.building.isNaturalRock && !def.building.isResourceRock);
@@ -90,6 +128,13 @@ namespace GenerateFauxStoneFloors
 #if DEBUG
                 Log.Message($"Generating floors for {rock.ToStringSafe()}");
 #endif
+                if (IgnoredDefNames.Contains(rock.defName))
+                {
+#if DEBUG
+                    Log.Message("def lacks a good material to make a floor of and is explicitly ignored.");
+#endif
+                    continue;
+                }
                 FauxRoughStone fauxRoughDef = new(rock, pack);
                 FauxRoughHewnStone fauxRoughHewnDef = new(rock, pack);
                 FauxSmoothStone fauxSmoothDef = new(rock, pack);
@@ -214,7 +259,7 @@ namespace GenerateFauxStoneFloors
                     Log.Error($"[FauxStoneFloors] Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                     return;
                 }
-                ThingDef blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
+                ThingDef blocks = GetBlocksForRock(rockDef);
                 if (blocks is null)
                 {
                     Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
@@ -263,14 +308,15 @@ namespace GenerateFauxStoneFloors
             {
                 if (rockDef is null)
                 {
-                    Log.Error("Tried to create Faux Rough-Hewn Rock from null Thing.");
+                    Log.Error("[FauxStoneFloors] Tried to create Faux Rough-Hewn Rock from null Thing.");
                     return;
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Warning($"Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
+                    Log.Error($"[FauxStoneFloors] Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
+                    return;
                 }
-                ThingDef blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
+                ThingDef blocks = GetBlocksForRock(rockDef);
                 if (blocks is null)
                 {
                     Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
@@ -324,12 +370,13 @@ namespace GenerateFauxStoneFloors
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Warning($"[FauxStoneFloors] Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
+                    Log.Error($"[FauxStoneFloors] Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
+                    return;
                 }
-                ThingDef blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
+                ThingDef blocks = GetBlocksForRock(rockDef);
                 if (blocks is null)
                 {
-                    Log.Warning($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
+                    Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
                     return;
                 }
 
