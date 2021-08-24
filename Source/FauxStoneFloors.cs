@@ -18,7 +18,7 @@ namespace GenerateFauxStoneFloors
 
         public static void AddImpliedFauxFloors()
         {
-            foreach (var terrainDef in FauxStoneFloors.GenerateFauxStoneFloors())
+            foreach (TerrainDef terrainDef in FauxStoneFloors.GenerateFauxStoneFloors())
             {
                 DefGenerator.AddImpliedDef(terrainDef);
                 if (terrainDef.BuildableByPlayer)
@@ -31,33 +31,37 @@ namespace GenerateFauxStoneFloors
             WealthWatcher.ResetStaticData();
         }
 
-        private static readonly Dictionary<System.Type, HashSet<ushort>> generatedHashes = new Dictionary<System.Type, HashSet<ushort>>();
+        private static readonly Dictionary<System.Type, HashSet<ushort>> generatedHashes = new();
 
         private static void GenerateNewHash<T>(T def) where T : Def
         {
 #if DEBUG
             Log.Message($"Generating hash for {def.defName}");
 #endif
-            var alreadyGeneratedHashes = generatedHashes.TryGetValue(typeof(T));
+            HashSet<ushort> alreadyGeneratedHashes = generatedHashes.TryGetValue(typeof(T));
             if (alreadyGeneratedHashes == null)
             {
                 alreadyGeneratedHashes = new HashSet<ushort>();
                 generatedHashes.SetOrAdd(typeof(T), alreadyGeneratedHashes);
             }
-            var existingHashes = DefDatabase<T>.AllDefs.Select(d => d.shortHash);
-            var generatedHash = (ushort)(GenText.StableStringHash(def.defName) % ushort.MaxValue);
-            var iterations = 0;
+            IEnumerable<ushort> existingHashes = DefDatabase<T>.AllDefs.Select(d => d.shortHash);
+            ushort generatedHash = (ushort)(GenText.StableStringHash(def.defName) % ushort.MaxValue);
+            int iterations = 0;
 
             while (generatedHash == 0 || existingHashes.Contains(generatedHash) || alreadyGeneratedHashes.Contains(generatedHash))
             {
                 generatedHash++;
                 iterations++;
                 if (iterations > 5000)
+                {
                     Log.Warning("[FauxRockFloors] Short hashes are saturated. There are probably too many Defs, or the author of this mod screwed something up. Either way, go complain somewhere.");
+                }
             }
 #if DEBUG
             if (DefDatabase<T>.GetByShortHash(generatedHash) is T existingDef && existingDef != null)
+            {
                 Log.Error($"Hash {generatedHash} already exists on {existingDef.defName} but was also generated for {def.defName}");
+            }
 #endif
             alreadyGeneratedHashes.Add(generatedHash);
             def.shortHash = generatedHash;
@@ -65,30 +69,30 @@ namespace GenerateFauxStoneFloors
 
         internal static IEnumerable<TerrainDef> GenerateFauxStoneFloors(ModContentPack pack = null)
         {
-            var rocks = DefDatabase<ThingDef>.AllDefs.Where(def => !(def.building is null) && def.building.isNaturalRock && !def.building.isResourceRock);
+            IEnumerable<ThingDef> rocks = DefDatabase<ThingDef>.AllDefs.Where(def => !(def.building is null) && def.building.isNaturalRock && !def.building.isResourceRock);
 
-            var roughDesignationDropdown = new DesignatorDropdownGroupDef
+            DesignatorDropdownGroupDef roughDesignationDropdown = new()
             {
                 defName = "FloorRoughStoneFaux",
                 label = "faux rough floor",
                 generated = true
             };
-            var roughHewnDesignatorDropdown = new DesignatorDropdownGroupDef
+            DesignatorDropdownGroupDef roughHewnDesignatorDropdown = new()
             {
                 defName = "FloorRoughHewnStoneFaux",
                 label = "faux rough-hewn floor",
                 generated = true
             };
 
-            var result = new List<TerrainDef>();
-            foreach (var rock in rocks)
+            List<TerrainDef> result = new();
+            foreach (ThingDef rock in rocks)
             {
 #if DEBUG
                 Log.Message($"Generating floors for {rock.ToStringSafe()}");
 #endif
-                var fauxRoughDef = new FauxRoughStone(rock, pack);
-                var fauxRoughHewnDef = new FauxRoughHewnStone(rock, pack);
-                var fauxSmoothDef = new FauxSmoothStone(rock, pack);
+                FauxRoughStone fauxRoughDef = new(rock, pack);
+                FauxRoughHewnStone fauxRoughHewnDef = new(rock, pack);
+                FauxSmoothStone fauxSmoothDef = new(rock, pack);
 
                 fauxRoughDef.designatorDropdown = roughDesignationDropdown;
                 fauxRoughHewnDef.designatorDropdown = roughHewnDesignatorDropdown;
@@ -105,7 +109,7 @@ namespace GenerateFauxStoneFloors
 
         private static ThingDef GenerateBlueprint(TerrainDef terrDef)
         {
-            var blueprintDef = new ThingDef
+            ThingDef blueprintDef = new()
             {
                 category = ThingCategory.Ethereal,
                 altitudeLayer = AltitudeLayer.Blueprint,
@@ -137,7 +141,7 @@ namespace GenerateFauxStoneFloors
 
         private static ThingDef GenerateFrame(TerrainDef terrDef)
         {
-            var frameDef = new ThingDef
+            ThingDef frameDef = new()
             {
                 isFrameInt = true,
                 thingClass = typeof(Frame),
@@ -167,7 +171,9 @@ namespace GenerateFauxStoneFloors
             frameDef.comps.Add(new CompProperties_Forbiddable());
             terrDef.frameDef = frameDef;
             if (!frameDef.IsFrame)
+            {
                 Log.Error("Framedef is not frame: " + frameDef);
+            }
 
             GenerateNewHash(frameDef);
 
@@ -208,7 +214,7 @@ namespace GenerateFauxStoneFloors
                     Log.Error($"[FauxStoneFloors] Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                     return;
                 }
-                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
+                ThingDef blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
                 if (blocks is null)
                 {
                     Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
@@ -264,7 +270,7 @@ namespace GenerateFauxStoneFloors
                 {
                     Log.Warning($"Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
-                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
+                ThingDef blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
                 if (blocks is null)
                 {
                     Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
@@ -320,7 +326,7 @@ namespace GenerateFauxStoneFloors
                 {
                     Log.Warning($"[FauxStoneFloors] Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
-                var blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
+                ThingDef blocks = DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName);
                 if (blocks is null)
                 {
                     Log.Warning($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
