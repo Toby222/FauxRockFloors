@@ -92,6 +92,8 @@ namespace GenerateFauxStoneFloors
                     return DefDatabase<ThingDef>.GetNamed("AB_SlimeMeal");
                 case "GU_AncientMetals":
                     return null;
+                case "BiomesIslands_CoralRock":
+                    return DefDatabase<ThingDef>.GetNamed("BiomesIslands_BlocksCoral");
             }
 
             if (Prefixes.FirstOrDefault(prefix => rockDef.defName.StartsWith(prefix)) is string rockDefNamePrefix)
@@ -107,7 +109,7 @@ namespace GenerateFauxStoneFloors
 
         internal static IEnumerable<TerrainDef> GenerateFauxStoneFloors(ModContentPack pack = null)
         {
-            IEnumerable<ThingDef> rocks = DefDatabase<ThingDef>.AllDefs.Where(def => !(def.building is null) && def.building.isNaturalRock && !def.building.isResourceRock);
+            IEnumerable<ThingDef> rocks = DefDatabase<ThingDef>.AllDefs.Where(def => def.building is not null && def.building.isNaturalRock && !def.building.isResourceRock);
 
             DesignatorDropdownGroupDef roughDesignationDropdown = new()
             {
@@ -135,19 +137,30 @@ namespace GenerateFauxStoneFloors
 #endif
                     continue;
                 }
-                FauxRoughStone fauxRoughDef = new(rock, pack);
-                FauxRoughHewnStone fauxRoughHewnDef = new(rock, pack);
-                FauxSmoothStone fauxSmoothDef = new(rock, pack);
+                try
+                {
+                    FauxRoughStone fauxRoughDef = new(rock, pack);
+                    FauxRoughHewnStone fauxRoughHewnDef = new(rock, pack);
+                    FauxSmoothStone fauxSmoothDef = new(rock, pack);
 
-                fauxRoughDef.designatorDropdown = roughDesignationDropdown;
-                fauxRoughHewnDef.designatorDropdown = roughHewnDesignatorDropdown;
+                    fauxRoughDef.designatorDropdown = roughDesignationDropdown;
+                    fauxRoughHewnDef.designatorDropdown = roughHewnDesignatorDropdown;
 
-                fauxRoughDef.smoothedTerrain = fauxSmoothDef;
-                fauxRoughHewnDef.smoothedTerrain = fauxSmoothDef;
+                    fauxRoughDef.smoothedTerrain = fauxSmoothDef;
+                    fauxRoughHewnDef.smoothedTerrain = fauxSmoothDef;
 
-                result.Add(fauxRoughDef);
-                result.Add(fauxRoughHewnDef);
-                result.Add(fauxSmoothDef);
+                    result.Add(fauxRoughDef);
+                    result.Add(fauxRoughHewnDef);
+                    result.Add(fauxSmoothDef);
+                }
+                catch (System.ArgumentNullException nullException)
+                {
+                    Log.Error(nullException.Message);
+                }
+                catch (System.ArgumentOutOfRangeException argumentException)
+                {
+                    Log.Error(argumentException.Message);
+                }
             }
             return result;
         }
@@ -251,19 +264,16 @@ namespace GenerateFauxStoneFloors
             {
                 if (rockDef is null)
                 {
-                    Log.Error("[FauxStoneFloors] Tried to create Faux Rough Rock from null Thing.");
-                    return;
+                    throw new System.ArgumentNullException("Tried to create Faux Rough Rock from null Thing.");
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Error($"[FauxStoneFloors] Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
-                    return;
+                    throw new System.ArgumentOutOfRangeException($"Tried to create Faux Rough Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
                 ThingDef blocks = GetBlocksForRock(rockDef);
                 if (blocks is null)
                 {
-                    Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
-                    return;
+                    throw new System.ArgumentOutOfRangeException($"Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
                 }
 
                 description = "Made to mimic ugly natural rock. Since these floors are not made for their beauty, they can be made faster but require slightly more material than regular stone tiles. Can be smoothed.";
@@ -308,19 +318,16 @@ namespace GenerateFauxStoneFloors
             {
                 if (rockDef is null)
                 {
-                    Log.Error("[FauxStoneFloors] Tried to create Faux Rough-Hewn Rock from null Thing.");
-                    return;
+                    throw new System.ArgumentNullException("[FauxStoneFloors] Tried to create Faux Rough-Hewn Rock from null Thing.");
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Error($"[FauxStoneFloors] Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
-                    return;
+                    throw new System.ArgumentOutOfRangeException($"[FauxStoneFloors] Tried to create Faux Rough-Hewn Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
                 ThingDef blocks = GetBlocksForRock(rockDef);
                 if (blocks is null)
                 {
-                    Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
-                    return;
+                    throw new System.ArgumentOutOfRangeException($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
                 }
 
                 description = "Made to mimic ugly natural rough-hewn rock. Since these floors are not made for their beauty, they can be made faster but require slightly more material than regular stone tiles. Can be smoothed.";
@@ -365,19 +372,16 @@ namespace GenerateFauxStoneFloors
             {
                 if (rockDef is null)
                 {
-                    Log.Error("[FauxStoneFloors] Tried to create Faux Smooth Rock from null Thing.");
-                    return;
+                    throw new System.ArgumentNullException("[FauxStoneFloors] Tried to create Faux Smooth Rock from null Thing.");
                 }
                 if (rockDef.building is null || !rockDef.building.isNaturalRock || rockDef.building.isResourceRock)
                 {
-                    Log.Error($"[FauxStoneFloors] Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
-                    return;
+                    throw new System.ArgumentOutOfRangeException($"[FauxStoneFloors] Tried to create Faux Smooth Rock from Thing ({rockDef.ToStringSafe()}) that isn't Rock");
                 }
                 ThingDef blocks = GetBlocksForRock(rockDef);
                 if (blocks is null)
                 {
-                    Log.Error($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
-                    return;
+                    throw new System.ArgumentOutOfRangeException($"[FauxStoneFloors] Couldn't find stone blocks for ThingDef ({rockDef.ToStringSafe()})");
                 }
 
                 description = "Originally made to mimic ugly natural rock, this floor has been polished to a shiny, smooth surface.";
