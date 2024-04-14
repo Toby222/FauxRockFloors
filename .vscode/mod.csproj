@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Library</OutputType>
+        <TargetFramework>net480</TargetFramework>
+        <PlatformTarget>x64</PlatformTarget>
+        <!-- Modify [RootNamespace], [AssemblyName], [OutputPath], [VersionPrefix] -->
+        <RootNamespace>FauxStoneFloors</RootNamespace>
+        <AssemblyName>FauxStoneFloors</AssemblyName>
+        <OutputPath>../1.5/Assemblies</OutputPath>
+        <LangVersion>latest</LangVersion>
+        <VersionPrefix>4.0.0.0</VersionPrefix>
+        <!-- do not generate pdb file -->
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <Nullable>enable</Nullable>
+        <!-- Contents of About.xml
+            See https://rimworldwiki.com/wiki/Modding_Tutorials/About.xml -->
+        <ModMetaData>
+            <name>Faux Rock Floor</name>
+            <author>Toby</author>
+            <supportedVersions>
+                <li>1.2</li>
+                <li>1.3</li>
+                <li>1.4</li>
+                <li>1.5</li>
+            </supportedVersions>
+            <packageId>toby.fauxrockfloor</packageId>
+            <description>Adds buildable floors that look like natural rock, in rough or rough-hewn variations.
+            Faster to build than Tiled Floors but also slightly more expensive.
+            Can be smoothed.
+
+            There are quite possibly some bugs because what I did was so scuffed.
+
+            Also off Steam at: https://github.com/Toby222/FauxRockFloors
+
+            Goes well with MBS Faux Rock Wall (https://steamcommunity.com/sharedfiles/filedetails/?id=760281834)
+            </description>
+            <loadAfter>
+                <li>Ludeon.RimWorld</li>
+            </loadAfter>
+        </ModMetaData>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Mod -->
+        <Compile Include="../Source/**/*" />
+        <PackageReference Include="Krafs.Rimworld.Ref"
+                          Version="1.5.4063" />
+        <!-- Set IncludeAssets to 'compile' to enable Harmony -->
+        <PackageReference Include="Lib.Harmony"
+                          Version="2.2.2"
+                          IncludeAssets="compile" />
+        <PackageReference Include="roslynator.analyzers"
+                          Version="4.12.0"
+                          IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"
+                          PrivateAssets="all" />
+        <PackageReference Include="roslynator.formatting.analyzers"
+                          Version="4.12.0"
+                          IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"
+                          PrivateAssets="all" />
+        <Reference Include="VanillaPsycastsExpanded"
+                   HintPath="..\..\VanillaPsycastsExpanded\1.5\Assemblies\VanillaPsycastsExpanded.dll"
+                   IncludeAssets="compile"
+                   Private="false" />
+        <Reference Include="VFECore"
+                   HintPath="..\..\VanillaExpandedFramework\1.5\Assemblies\VFECore.dll"
+                   IncludeAssets="compile"
+                   Private="false" />
+    </ItemGroup>
+</Project>
