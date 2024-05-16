@@ -7,11 +7,12 @@ pushd $script_dir
 configuration=${1:-Debug}
 
 # build dll
-rm -f ../1.5/Assemblies/*
-dotnet build mod.csproj -c ${configuration}
+echo "Building for RimWorld 1.5"
+rm -f $mod_dir/1.5/Assemblies/*
+dotnet build $script_dir/mod.csproj -c ${configuration} -p:GAME_VERSION=v1.5
 
-# generate About.xml
-rm -f ../About/About.xml
-xsltproc -o ../About/About.xml ./about.xml.xslt ./mod.csproj 
+echo "Generating About.xml"
+rm -f $mod_dir/About/About.xml
+xsltproc -o $mod_dir/About/About.xml $script_dir/about.xml.xslt $script_dir/mod.csproj 
 
 popd

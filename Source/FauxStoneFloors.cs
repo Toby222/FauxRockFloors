@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using RimWorld;
 using UnityEngine;
@@ -135,7 +134,7 @@ public static class FauxStoneFloors
         }
 
         if (
-            Prefixes.FirstOrDefault(prefix => rockDef.defName!.StartsWith(prefix))
+            Prefixes.FirstOrDefault(prefix => rockDef.defName?.StartsWith(prefix) == true)
             is string rockDefNamePrefix
         )
         {
@@ -339,6 +338,7 @@ public static class FauxStoneFloors
             edgeType = TerrainEdgeType.FadeRough;
             affordances ??= [];
             affordances.Add(TerrainAffordanceDefOf.SmoothableStone);
+            isPaintable = false;
             pathCost = 2;
             filthAcceptanceMask = FilthSourceFlags.Terrain | FilthSourceFlags.Unnatural;
             researchPrerequisites = [DefDatabase<ResearchProjectDef>.GetNamed("Stonecutting")];
@@ -391,6 +391,7 @@ public static class FauxStoneFloors
             edgeType = TerrainEdgeType.FadeRough;
             affordances ??= [];
             affordances.Add(TerrainAffordanceDefOf.SmoothableStone);
+            isPaintable = false;
             pathCost = 1;
             filthAcceptanceMask = FilthSourceFlags.Any;
             researchPrerequisites = [DefDatabase<ResearchProjectDef>.GetNamed("Stonecutting")];
@@ -441,6 +442,7 @@ public static class FauxStoneFloors
                 "Originally made to mimic ugly natural rock, this floor has been polished to a shiny, smooth surface.";
             texturePath = "Terrain/Surfaces/SmoothStone";
             edgeType = TerrainEdgeType.FadeRough;
+            isPaintable = true;
             pathCost = 1;
             filthAcceptanceMask = FilthSourceFlags.Any;
             researchPrerequisites = [DefDatabase<ResearchProjectDef>.GetNamed("Stonecutting")];
