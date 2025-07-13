@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using HarmonyLib;
 using RimWorld;
 using UnityEngine;
 using Verse;
 
 namespace GenerateFauxStoneFloors;
 
-[StaticConstructorOnStartup]
-public static class FauxStoneFloors
+#if DEBUG
+#warning Compiling in Debug mode
+#endif
+
+public class FauxStoneFloors : Mod
 {
     private const int BuildCost = 6;
     private const string TerrainBlueprintGraphicPath = "Things/Special/TerrainBlueprint";
@@ -23,17 +27,21 @@ public static class FauxStoneFloors
     private static readonly string[] IgnoredDefNames =
     [
         // Alpha Biomes
-        "GU_AncientMetals"
+        "GU_AncientMetals",
+        "SolidIce"
     ];
 
     private static readonly Dictionary<Type, HashSet<ushort>> GeneratedHashes = [];
 
-    static FauxStoneFloors()
+    private static ModContentPack? content;
+
+    public FauxStoneFloors(ModContentPack content) : base(content)
     {
-        AddImpliedFauxFloors();
+        FauxStoneFloors.content = content;
+        new Harmony("dev.toby.fauxrockfloors").PatchAll();
     }
 
-    private static void AddImpliedFauxFloors()
+    public static void AddImpliedFauxFloors()
     {
         foreach (TerrainDef terrainDef in GenerateFauxStoneFloors())
         {
@@ -48,58 +56,6 @@ public static class FauxStoneFloors
         DesignationCategoryDefOf.Floors!.ResolveReferences();
         WealthWatcher.ResetStaticData();
     }
-
-    private static void GenerateNewHash<T>(T def)
-        where T : Def
-    {
-#if DEBUG
-        Log.Message($"Generating hash for {def.defName}");
-#endif
-        if (!GeneratedHashes.ContainsKey(typeof(T)))
-        {
-            GeneratedHashes[typeof(T)] = [];
-        }
-        HashSet<ushort> alreadyGeneratedHashes = GeneratedHashes[typeof(T)];
-
-        var existingHashes = DefDatabase<T>
-            .AllDefs!.Select(d =>
-                (
-                    d ?? throw new NullReferenceException("found null def while generating hash")
-                ).shortHash
-            )
-            .ToList();
-        var generatedHash = (ushort)(GenText.StableStringHash(def.defName) % ushort.MaxValue);
-        var iterations = 0;
-
-        while (
-            generatedHash == 0
-            || existingHashes.Contains(generatedHash)
-            || alreadyGeneratedHashes.Contains(generatedHash)
-        )
-        {
-            generatedHash++;
-            iterations++;
-            if (iterations > 5000)
-            {
-                Log.Warning(
-                    "[FauxRockFloors] Short hashes are saturated. There are probably too many Defs, or the author of this mod screwed something up. Either way, go complain somewhere."
-                );
-            }
-        }
-#if DEBUG
-        if (DefDatabase<T>.GetByShortHash(generatedHash) is T existingDef)
-        {
-            Log.Error(
-                $"Hash {generatedHash} already exists on {existingDef.defName} but was also generated for {def.defName}"
-            );
-        }
-        Log.Message($"Adding hash {generatedHash} for {def.defName}");
-#endif
-        alreadyGeneratedHashes.Add(generatedHash);
-        def.shortHash = generatedHash;
-    }
-
-    // Thanks Alpha Biomes, very cool
 
     private static ThingDef? GetBlocksForRock(ThingDef rockDef)
     {
@@ -128,6 +84,7 @@ public static class FauxStoneFloors
             case "AB_SlimeStone":
                 return DefDatabase<ThingDef>.GetNamed("AB_SlimeMeal");
             case "GU_AncientMetals":
+            case "SolidIce":
                 return null;
             case "BiomesIslands_CoralRock":
                 return DefDatabase<ThingDef>.GetNamed("BiomesIslands_BlocksCoral");
@@ -148,7 +105,7 @@ public static class FauxStoneFloors
         return DefDatabase<ThingDef>.GetNamed("Blocks" + rockDef.defName, false);
     }
 
-    private static IEnumerable<TerrainDef> GenerateFauxStoneFloors(ModContentPack? pack = default)
+    private static IEnumerable<TerrainDef> GenerateFauxStoneFloors()
     {
         var rocks = DefDatabase<ThingDef>.AllDefs!.Where(def =>
             def?.building is not null && def.building.isNaturalRock && !def.building.isResourceRock
@@ -159,14 +116,16 @@ public static class FauxStoneFloors
             {
                 defName = "FloorRoughStoneFaux",
                 label = "faux rough floor",
-                generated = true
+                generated = true,
+                modContentPack = content,
             };
         DesignatorDropdownGroupDef roughHewnDesignatorDropdown =
             new()
             {
                 defName = "FloorRoughHewnStoneFaux",
                 label = "faux rough-hewn floor",
-                generated = true
+                generated = true,
+                modContentPack = content,
             };
 
         List<TerrainDef> result = [];
@@ -187,9 +146,9 @@ public static class FauxStoneFloors
 
             try
             {
-                FauxRoughStone fauxRoughDef = new(rock, pack);
-                FauxRoughHewnStone fauxRoughHewnDef = new(rock, pack);
-                FauxSmoothStone fauxSmoothDef = new(rock, pack);
+                FauxRoughStone fauxRoughDef = new(rock, content);
+                FauxRoughHewnStone fauxRoughHewnDef = new(rock, content);
+                FauxSmoothStone fauxSmoothDef = new(rock, content);
 
                 fauxRoughDef.designatorDropdown = roughDesignationDropdown;
                 fauxRoughHewnDef.designatorDropdown = roughHewnDesignatorDropdown;
@@ -245,7 +204,6 @@ public static class FauxStoneFloors
                 comps = [new CompProperties_Forbiddable()]
             };
 
-        GenerateNewHash(blueprintDef);
 
         return blueprintDef;
     }
@@ -283,12 +241,11 @@ public static class FauxStoneFloors
             comps = [new CompProperties_Forbiddable()]
         };
 
-        GenerateNewHash(terrainDef.frameDef);
 
         return terrainDef.frameDef;
     }
 
-    public abstract class FloorBase : TerrainDef
+    private abstract class FloorBase : TerrainDef
     {
         protected FloorBase()
         {
@@ -308,7 +265,7 @@ public static class FauxStoneFloors
         }
     }
 
-    public class FauxRoughStone : FloorBase
+    private class FauxRoughStone : FloorBase
     {
         internal FauxRoughStone(ThingDef rockDef, ModContentPack? pack = default)
         {
@@ -354,14 +311,12 @@ public static class FauxStoneFloors
             blueprintDef = GenerateBlueprint(this);
             frameDef = GenerateFrame(this);
 
-            GenerateNewHash<TerrainDef>(this);
-
             StatUtility.SetStatValueInList(ref statBases, StatDefOf.WorkToBuild, 500f);
             StatUtility.SetStatValueInList(ref statBases, StatDefOf.Beauty, -1f);
         }
     }
 
-    public class FauxRoughHewnStone : FloorBase
+    private class FauxRoughHewnStone : FloorBase
     {
         internal FauxRoughHewnStone(ThingDef rockDef, ModContentPack? pack = default)
         {
@@ -407,16 +362,14 @@ public static class FauxStoneFloors
             blueprintDef = GenerateBlueprint(this);
             frameDef = GenerateFrame(this);
 
-            GenerateNewHash<TerrainDef>(this);
-
             StatUtility.SetStatValueInList(ref statBases, StatDefOf.WorkToBuild, 500f);
             StatUtility.SetStatValueInList(ref statBases, StatDefOf.Beauty, -1f);
         }
     }
 
-    public class FauxSmoothStone : FloorBase
+    private class FauxSmoothStone : FloorBase
     {
-        public FauxSmoothStone(ThingDef rockDef, ModContentPack? pack = default)
+        internal FauxSmoothStone(ThingDef rockDef, ModContentPack? pack = default)
         {
             if (rockDef is null)
             {
@@ -457,10 +410,17 @@ public static class FauxStoneFloors
 
             costList = [new() { count = BuildCost, thingDef = blocks }];
 
-            GenerateNewHash<TerrainDef>(this);
-
             StatUtility.SetStatValueInList(ref statBases, StatDefOf.Beauty, 2f);
             StatUtility.SetStatValueInList(ref statBases, StatDefOf.MarketValue, 8f);
         }
+    }
+}
+
+[HarmonyPatch(typeof(DefGenerator), nameof(DefGenerator.GenerateImpliedDefs_PreResolve))]
+public static class Patch
+{
+    public static void Postfix()
+    {
+        FauxStoneFloors.AddImpliedFauxFloors();
     }
 }

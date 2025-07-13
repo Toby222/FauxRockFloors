@@ -1,14 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup Condition="'$(GAME_VERSION)'==''">
+        <DefineConstants>v1_6</DefineConstants>
+        <OutputPath>../1.6/Assemblies</OutputPath>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(GAME_VERSION)'=='v1.5'">
+        <DefineConstants>v1_5</DefineConstants>
+        <OutputPath>../1.5/Assemblies</OutputPath>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(GAME_VERSION)'=='v1.6'">
+        <DefineConstants>v1_6</DefineConstants>
+        <OutputPath>../1.6/Assemblies</OutputPath>
+    </PropertyGroup>
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <TargetFramework>net480</TargetFramework>
+        <TargetFramework>net481</TargetFramework>
         <PlatformTarget>x64</PlatformTarget>
         <!-- Modify [RootNamespace], [AssemblyName], [OutputPath], [VersionPrefix] -->
         <RootNamespace>FauxStoneFloors</RootNamespace>
         <AssemblyName>FauxStoneFloors</AssemblyName>
-        <OutputPath>../1.5/Assemblies</OutputPath>
         <LangVersion>latest</LangVersion>
-        <VersionPrefix>4.1.0.0</VersionPrefix>
+        <VersionPrefix>5.0.0.0</VersionPrefix>
         <!-- do not generate pdb file -->
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
@@ -17,6 +28,7 @@
         <!-- Contents of About.xml
             See https://rimworldwiki.com/wiki/Modding_Tutorials/About.xml -->
         <ModMetaData>
+            <packageId>toby.fauxrockfloor</packageId>
             <name>Faux Rock Floor</name>
             <author>Toby</author>
             <modVersion></modVersion>
@@ -25,8 +37,8 @@
                 <li>1.3</li>
                 <li>1.4</li>
                 <li>1.5</li>
+                <li>1.6</li>
             </supportedVersions>
-            <packageId>toby.fauxrockfloor</packageId>
             <description>Adds buildable floors that look like natural rock, in rough or rough-hewn variations.
             Faster to build than Tiled Floors but also slightly more expensive.
             Can be smoothed.
@@ -37,27 +49,52 @@
 
             Goes well with MBS Faux Rock Wall (https://steamcommunity.com/sharedfiles/filedetails/?id=760281834)
             </description>
-            <loadAfter>
-                <li>Ludeon.RimWorld</li>
-            </loadAfter>
+            <modDependenciesByVersion>
+                <v1.5>
+                    <li>
+                        <packageId>brrainz.harmony</packageId>
+                        <displayName>Harmony</displayName>
+                        <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+                        <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+                    </li>
+                </v1.5>
+                <v1.6>
+                    <li>
+                        <packageId>brrainz.harmony</packageId>
+                        <displayName>Harmony</displayName>
+                        <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+                        <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+                    </li>
+                </v1.6>
+            </modDependenciesByVersion>
+            <loadAfterByVersion>
+                <v1.5>
+                    <li>brrainz.harmony</li>
+                </v1.5>
+                <v1.6>
+                    <li>brrainz.harmony</li>
+                </v1.6>
+            </loadAfterByVersion>
         </ModMetaData>
     </PropertyGroup>
+    <ItemGroup Condition="'$(GAME_VERSION)'==''">
+        <!-- <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4518" /> -->
+        <Reference Include="RimWorld" HintPath="/home/toby/.local/share/Steam/steamapps/common/RimWorld/RimWorldLinux_Data/Managed/Assembly-CSharp.dll" IncludeAssets="compile" Private="false" />
+        <PackageReference Include="Lib.Harmony" Version="2.3.6" IncludeAssets="compile" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(GAME_VERSION)'=='v1.5'">
+        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.4104" />
+        <PackageReference Include="Lib.Harmony" Version="2.3.6" IncludeAssets="compile" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(GAME_VERSION)'=='v1.6'">
+        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4518" />
+        <!-- <Reference Include="RimWorld" HintPath="/home/replace_this_path_with_your_username/.local/share/Steam/steamapps/common/RimWorld/RimWorldLinux_Data/Managed/Assembly-CSharp.dll" IncludeAssets="compile" Private="false" /> -->
+        <PackageReference Include="Lib.Harmony" Version="2.3.6" IncludeAssets="compile" />
+    </ItemGroup>
     <ItemGroup>
         <!-- Mod -->
-        <Compile Include="../Source/**/*" />
-        <PackageReference Include="Krafs.Rimworld.Ref"
-                          Version="1.5.4104" />
-        <!-- Set IncludeAssets to 'compile' to enable Harmony -->
-        <PackageReference Include="Lib.Harmony"
-                          Version="2.2.2"
-                          IncludeAssets="compile" />
-        <PackageReference Include="roslynator.analyzers"
-                          Version="4.12.4"
-                          IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"
-                          PrivateAssets="all" />
-        <PackageReference Include="roslynator.formatting.analyzers"
-                          Version="4.12.4"
-                          IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive"
-                          PrivateAssets="all" />
+        <Compile Include="../Source/**/*.cs" />
+        <PackageReference Include="roslynator.analyzers" Version="4.13.1" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" PrivateAssets="all" />
+        <PackageReference Include="roslynator.formatting.analyzers" Version="4.13.1" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" PrivateAssets="all" />
     </ItemGroup>
 </Project>
